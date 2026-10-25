@@ -170,32 +170,59 @@
         <!-- 左：ドラクエ風コマンドウィンドウ -->
         <div class="dq-window command-win">
           <div>
-            <div class="command-title">コマンド？</div>
+            <div class="command-title">コマンド</div>
             <div class="command-list">
-              <button
-                id="btn-normal"
-                class="dq-btn"
-                onclick="handlePlayerCommand('normal')"
-              >
-                たたかう
-                <span class="sub-info">命中90% / 会心15% / 威力18</span>
-              </button>
-              <button
-                id="btn-heavy"
-                class="dq-btn"
-                onclick="handlePlayerCommand('heavy')"
-              >
-                まじんぎり
-                <span class="sub-info">命中50% / 会心45% / 威力32</span>
-              </button>
-              <button
-                id="btn-gamble"
-                class="dq-btn"
-                onclick="handlePlayerCommand('gamble')"
-              >
-                運命のダイス
-                <span class="sub-info">命中100% / 確変突入45%</span>
-              </button>
+              <!--メインコマンド-->
+              <div id="menu-main">
+                <button class="dq-btn" onclick="openMenu('attack')">
+                  たたかう
+                  <span class="sub-info">攻撃技を選択</span>
+                </button>
+                <button class="dq-btn" onclick="openMenu('magic')">
+                  じゅもん
+                  <span class="sub-info">特殊技・魔法を選択</span>
+                </button>
+              </div>
+
+              <!--戦うを押したときに開くメニュー-->
+              <div id="menu-attack" style="display: none">
+                <button
+                  id="btn-normal"
+                  class="dq-btn"
+                  onclick="handlePlayerCommand('normal')"
+                >
+                  こうげき
+                  <span class="sub-info">命中90% / 会心15% / 威力18</span>
+                </button>
+
+                <button
+                  id="btn-heavy"
+                  class="dq-btn"
+                  onclick="handlePlayerCommand('heavy')"
+                >
+                  まじんぎり
+                  <span class="sub-info">命中50% / 会心45% / 威力32</span>
+                </button>
+                <button class="dq-btn" onclick="openMenu('main')">
+                  ↩もどる
+                </button>
+              </div>
+
+              <!--呪文を押したとき-->
+              <div id="menu-magic" style="display: none">
+                <button
+                  id="btn-gamble"
+                  class="dq-btn"
+                  onclick="handlePlayerCommand('gamble')"
+                >
+                  運命のダイス
+                  <span class="sub-info">命中100% / 確変突入45%</span>
+                </button>
+
+                <button class="dq-btn" onclick="openMenu('main')">
+                  ↩もどる
+                </button>
+              </div>
             </div>
           </div>
           <button class="reset-btn" onclick="resetGame()">

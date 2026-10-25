@@ -81,6 +81,8 @@ async function handlePlayerCommand(skillKey) {
   // 処理中やゲーム終了時はボタンを押せないようにガード
   if (state.isProcessing || state.isGameOver) return;
 
+  openMenu("main");
+
   state.isProcessing = true;
   state.phase = "player";
   updateUI();
@@ -273,6 +275,27 @@ function resetGame() {
   updateUI();
 }
 
+//メニューの表示非常時//
+//メニューの改装切り替え
+function openMenu(menuType) {
+  if (state.isProcessing || state.isGameOver) return;
+  const mainMenu = document.getElementById("menu-main");
+  const attackMenu = document.getElementById("menu-attack");
+  const magicMenu = document.getElementById("menu-magic");
+
+  mainMenu.style.display = "none";
+  attackMenu.style.display = "none";
+  magicMenu.style.display = "none";
+
+  if (menuType === "attack") {
+    attackMenu.style.display = "block";
+  } else if (menuType === "magic") {
+    magicMenu.style.display = "block";
+  } else {
+    mainMenu.style.display = "block";
+  }
+}
+
 // =========================================================================
 // ▼ ここから下は【UI描画・エフェクト演出用の裏方コード】です ▼
 // ※ここは既に完成しているので、学習中は無理に読んだり編集したりしなくて大丈夫です！
@@ -423,6 +446,11 @@ function addLog(message, className = "") {
   line.className = `log-line ${className}`;
   line.textContent = message;
   logContainer.appendChild(line);
+
+  const maxLogs = 5;
+  while (logContainer.children.length > maxLogs) {
+    logContainer.removeChild(logContainer.firstChild);
+  }
   logContainer.scrollTop = logContainer.scrollHeight;
 }
 
