@@ -1,0 +1,664 @@
+/* =========================================================================
+       【UI・演出用CSS】※ここはデザインとアニメーション用なので編集しなくてOKです！
+       ========================================================================= */
+:root {
+  --dq-bg: #0a0a12;
+  --dq-win-bg: rgba(15, 18, 38, 0.95);
+  --dq-border: #ffffff;
+  --dq-gold: #ffd700;
+  --dq-hp-green: #2ecc71;
+  --dq-danger: #ff4757;
+  --dq-fever: #ff9f43;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  padding: 15px;
+  background-color: #111;
+  background-image: radial-gradient(circle at 50% 20%, #2a2a4a 0%, #080810 80%);
+  color: #fff;
+  font-family: "Hiragino Kaku Gothic ProN", "Meiryo", monospace;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ゲーム全体の枠 */
+.game-screen {
+  width: 100%;
+  max-width: 720px;
+  background: var(--dq-bg);
+  border: 4px solid #444;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ドラクエ風ウィンドウ共通スタイル */
+.dq-window {
+  background: var(--dq-win-bg);
+  border: 3px solid var(--dq-border);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 2px #000,
+    0 4px 10px rgba(0, 0, 0, 0.5);
+  padding: 12px 16px;
+  position: relative;
+}
+
+/* 確変（フィーバー）中のウィンドウ発光演出 */
+.game-screen.fever-mode .dq-window.player-status-win {
+  border-color: var(--dq-gold);
+  box-shadow:
+    inset 0 0 15px rgba(255, 215, 0, 0.3),
+    0 0 15px rgba(255, 165, 2, 0.6);
+  animation: feverPulse 1.2s infinite alternate;
+}
+
+@keyframes feverPulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.01);
+  }
+}
+
+/* 1. 上部：プレイヤーステータスエリア */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.player-status-win {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-avatar {
+  width: 64px;
+  height: 64px;
+  background: #1e272e;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.player-info {
+  flex: 1;
+}
+
+.player-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.player-name {
+  font-size: 1.15rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: var(--dq-gold);
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #333;
+  border: 1px solid #888;
+}
+
+.status-badge.fever {
+  background: linear-gradient(45deg, #ff4757, #ffa502);
+  border-color: #fff;
+  color: #fff;
+  font-weight: bold;
+  animation: blink 0.6s infinite alternate;
+}
+
+.status-badge.buff {
+  background: #2980b9;
+  border-color: #74b9ff;
+}
+
+@keyframes blink {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+/* HPバー */
+.hp-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hp-label {
+  font-weight: bold;
+  color: var(--dq-hp-green);
+  min-width: 95px;
+}
+
+.bar-bg {
+  flex: 1;
+  height: 12px;
+  background: #222;
+  border: 1px solid #777;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2ecc71, #a3cb38);
+  width: 100%;
+  transition:
+    width 0.35s ease-out,
+    background 0.3s;
+}
+
+.bar-fill.low {
+  background: linear-gradient(90deg, #e74c3c, #f39c12);
+}
+
+/* ターン＆フェーズ表示ウィンドウ */
+.turn-win {
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.turn-num {
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.phase-badge {
+  margin-top: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.phase-player {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+}
+
+.phase-enemy {
+  background: rgba(255, 71, 87, 0.25);
+  color: #ff6b81;
+  border: 1px solid #ff4757;
+}
+
+/* 2. 中央：バトルフィールド（モンスター表示エリア） */
+.battle-field {
+  height: 240px;
+  background: linear-gradient(180deg, #141829 0%, #1e293b 65%, #2c3e50 100%);
+  border: 3px solid var(--dq-border);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+/* 背景の床グリッド演出 */
+.battle-field::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 35%;
+  background:
+    linear-gradient(
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 2px,
+      transparent 3px
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 2px,
+      transparent 3px
+    );
+  background-size:
+    100% 16px,
+    40px 100%;
+  transform: perspective(150px) rotateX(45deg);
+  pointer-events: none;
+}
+
+/* 確変中の背景オーラ */
+.game-screen.fever-mode .battle-field {
+  background: linear-gradient(180deg, #2c0c1e 0%, #4a1525 65%, #632619 100%);
+}
+
+/* モンスターコンテナ */
+.enemy-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.enemy-sprite-wrap {
+  width: 130px;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: monsterFloat 2.2s ease-in-out infinite;
+}
+
+@keyframes monsterFloat {
+  0%,
+  100% {
+    transform: translateY(0px) scale(1, 1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.03, 0.97);
+  }
+}
+
+/* 敵の情報プレート */
+.enemy-plate {
+  background: rgba(0, 0, 0, 0.75);
+  border: 2px solid #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  margin-top: 8px;
+  min-width: 220px;
+  text-align: center;
+}
+
+.enemy-name {
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.enemy-hp-text {
+  font-size: 0.85rem;
+  color: #ffd700;
+}
+
+/* 3. 下部：コマンド＆メッセージエリア（ドラクエ風2カラム） */
+.bottom-area {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 12px;
+  min-height: 200px;
+}
+
+@media (max-width: 600px) {
+  .bottom-area {
+    grid-template-columns: 1fr;
+  }
+}
+
+.command-win {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.command-title {
+  font-size: 0.9rem;
+  color: var(--dq-gold);
+  border-bottom: 2px solid #555;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ドラクエ風コマンドボタン */
+.dq-btn {
+  background: transparent;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 8px 10px 8px 24px;
+  text-align: left;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.dq-btn .sub-info {
+  display: block;
+  font-size: 0.72rem;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+/* ドラクエの「▶」カーソル */
+.dq-btn::before {
+  content: "▶";
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  font-size: 0.8rem;
+  opacity: 0;
+  color: var(--dq-gold);
+}
+
+.dq-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.dq-btn:hover:not(:disabled)::before {
+  opacity: 1;
+  animation: cursorBlink 0.5s infinite alternate;
+}
+
+@keyframes cursorBlink {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(3px);
+  }
+}
+
+.dq-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.reset-btn {
+  margin-top: 8px;
+  padding: 6px;
+  font-size: 0.8rem;
+  text-align: center;
+  background: #2c3e50;
+  border: 1px solid #7f8c8d;
+  color: #ecf0f1;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.reset-btn:hover {
+  background: #34495e;
+}
+
+/* メッセージログウィンドウ */
+.message-win {
+  display: flex;
+  flex-direction: column;
+}
+
+.log-box {
+  flex: 1;
+  height: 180px;
+  overflow-y: auto;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding-right: 6px;
+}
+
+.log-line {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.log-crit {
+  color: var(--dq-gold);
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+.log-miss {
+  color: #95a5a6;
+}
+.log-fever {
+  color: #ff9f43;
+  font-weight: bold;
+}
+.log-enemy {
+  color: #ff6b81;
+}
+.log-turn {
+  color: #7bed9f;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+/* =========================================================================
+       バトルエフェクト＆アニメーション用クラス
+       ========================================================================= */
+/* 斬撃エフェクト */
+.slash-effect {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 10;
+}
+
+.slash-effect.active {
+  animation: slashAnim 0.35s ease-out forwards;
+}
+
+@keyframes slashAnim {
+  0% {
+    opacity: 1;
+    transform: scale(0.5) rotate(-20deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5) rotate(10deg);
+  }
+}
+
+/* ダメージ数値ポップアップ */
+.damage-popup {
+  position: absolute;
+  top: 25px;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    2px 2px 0 #000,
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 20;
+}
+
+.damage-popup.crit {
+  color: var(--dq-gold);
+  font-size: 2.6rem;
+  text-shadow:
+    0 0 12px #ff4757,
+    2px 2px 0 #000;
+}
+
+.damage-popup.miss {
+  color: #bdc3c7;
+  font-size: 1.5rem;
+}
+
+.damage-popup.show {
+  animation: popupBounce 0.8s ease-out forwards;
+}
+
+@keyframes popupBounce {
+  0% {
+    opacity: 1;
+    transform: translateY(10px) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1.2);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-12px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-25px) scale(0.9);
+  }
+}
+
+/* 敵の被ダメージ点滅 */
+.enemy-hit {
+  animation: hitBlink 0.4s ease !important;
+}
+
+@keyframes hitBlink {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: translateX(0);
+  }
+  20% {
+    filter: brightness(3) invert(0.8);
+    transform: translateX(-10px);
+  }
+  40% {
+    filter: brightness(0.5);
+    transform: translateX(10px);
+  }
+  60% {
+    filter: brightness(2.5);
+    transform: translateX(-6px);
+  }
+  80% {
+    filter: brightness(1);
+    transform: translateX(6px);
+  }
+}
+
+/* 敵の攻撃突進モーション */
+.enemy-attack-motion {
+  animation: enemyTackle 0.45s ease-in-out !important;
+}
+
+@keyframes enemyTackle {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  30% {
+    transform: scale(0.9) translateY(-15px);
+  }
+  60% {
+    transform: scale(1.35) translateY(25px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* プレイヤー被弾時の画面全体シェイク（ドラクエ風） */
+.screen-shake {
+  animation: screenShake 0.45s ease-in-out;
+}
+
+@keyframes screenShake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(-10px, 6px);
+    background-color: #3a0d12;
+  }
+  30% {
+    transform: translate(10px, -6px);
+  }
+  45% {
+    transform: translate(-8px, -4px);
+    background-color: #3a0d12;
+  }
+  60% {
+    transform: translate(8px, 4px);
+  }
+  75% {
+    transform: translate(-4px, 2px);
+  }
+}
+
+/* クリティカル時の画面フラッシュ */
+.crit-flash {
+  animation: critFlashAnim 0.4s ease-out;
+}
+
+@keyframes critFlashAnim {
+  0% {
+    filter: brightness(2.2) contrast(1.2);
+  }
+  100% {
+    filter: brightness(1) contrast(1);
+  }
+}

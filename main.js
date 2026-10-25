@@ -1,0 +1,432 @@
+// =========================================================================
+// ★ ここから下が、あなたが学習・改造するメインのJavaScript領域です ★
+// （UIの書き換えやアニメーション処理は一番下にまとめてあるので、ここはロジックに集中できます！）
+// =========================================================================
+
+// =========================================================================
+// 【構想3：状態管理の実装】ゲーム全体の状態を管理するオブジェクト（State）
+// =========================================================================
+const state = {
+  turn: 1,
+  phase: "player", // 'player'（自分のターン） | 'enemy'（敵のターン）
+  isProcessing: false, // アニメーション再生中にボタン連打を防ぐフラグ
+  isGameOver: false,
+
+  // プレイヤーの状態
+  player: {
+    hp: 100,
+    maxHp: 100,
+    isFever: false, // 確変モード中かどうか
+    feverTurns: 0, // 確変モードの残りターン数
+    attackBuffTurns: 0, // 【拡張用】攻撃力アップなどのバフ残りターン数
+  },
+
+  // 敵の状態
+  enemy: {
+    hp: 150,
+    maxHp: 150,
+  },
+};
+
+// =========================================================================
+// 【構想1：コマンドと確率計算】技（スキル）のデータ定義
+// =========================================================================
+const skills = {
+  normal: {
+    name: "たたかう",
+    baseDamage: 18,
+    hitRate: 90, // 命中率（%）
+    critRate: 15, // 会心（クリティカル）率（%）
+  },
+  heavy: {
+    name: "まじんぎり",
+    baseDamage: 32,
+    hitRate: 50, // 当たりにくいが大ダメージ＆高クリティカル
+    critRate: 45,
+  },
+  gamble: {
+    name: "運命のダイス",
+    baseDamage: 8,
+    hitRate: 100,
+    critRate: 10,
+    feverChance: 45, // この技を使った時に確変へ突入する確率（%）
+  },
+};
+
+// =========================================================================
+// 確率計算用のユーティリティ関数（100面ダイス）
+// =========================================================================
+
+/**
+ * 1〜100までの乱数（100面ダイス）を振る関数
+ */
+function rollDice100() {
+  return Math.floor(Math.random() * 100) + 1;
+}
+
+/**
+ * 指定した確率（%）で成功するかを判定する関数
+ * 例: checkProbability(30) なら 30% の確率で true を返す
+ */
+function checkProbability(percent) {
+  const dice = rollDice100();
+  return dice <= percent;
+}
+
+// =========================================================================
+// バトルのターン進行管理（自分のターン → 間を空ける → 敵のターン）
+// ※アニメーションの「間（ウェイト）」を作るために async / await を使っています
+// =========================================================================
+async function handlePlayerCommand(skillKey) {
+  // 処理中やゲーム終了時はボタンを押せないようにガード
+  if (state.isProcessing || state.isGameOver) return;
+
+  state.isProcessing = true;
+  state.phase = "player";
+  updateUI();
+
+  addLog(`▼ ターン ${state.turn}：あなたの行動`, "log-turn");
+
+  // --- 1. プレイヤーの攻撃処理を実行 ---
+  await executePlayerAttack(skillKey);
+  updateUI();
+
+  // 敵のHPが0以下になったら勝利！
+  if (checkBattleEnd()) {
+    state.isProcessing = false;
+    updateUI();
+    return;
+  }
+
+  // --- 2. 自分のターンと敵のターンの間に「0.8秒の間」を作る ---
+  await wait(800);
+  state.phase = "enemy";
+  updateUI();
+
+  // --- 3. 敵のAI行動を実行 ---
+  await executeEnemyTurn();
+  updateUI();
+
+  // プレイヤーのHPが0以下になったら敗北…
+  if (checkBattleEnd()) {
+    state.isProcessing = false;
+    updateUI();
+    return;
+  }
+
+  // --- 4. ターン終了時の状態更新（確変やバフの残りターンを減らす） ---
+  await wait(600);
+  processTurnEnd();
+
+  // 再びプレイヤーのコマンド入力を受け付ける
+  state.phase = "player";
+  state.isProcessing = false;
+  updateUI();
+}
+
+// =========================================================================
+// 【構想1 & 2：プレイヤーの攻撃処理・確率計算・確変システムの拡張ポイント】
+// =========================================================================
+async function executePlayerAttack(skillKey) {
+  const skill = skills[skillKey];
+  addLog(`ゆうしゃの「${skill.name}」！`);
+  await wait(400);
+
+  // --- ステップA: 命中判定 ---
+  // 【拡張アイデア】確変中（state.player.isFever が true の時）は必中（100%）にする改造もおすすめ！
+  const isHit = checkProbability(skill.hitRate);
+
+  if (!isHit) {
+    await playMissEffect(); // ミス演出を再生
+    addLog(
+      `ミス！ キングスライムにダメージを与えられない！ (命中率:${skill.hitRate}%)`,
+      "log-miss",
+    );
+    return;
+  }
+
+  // --- ステップB: 会心（クリティカル）判定 & 確変システム連動 ---
+  let currentCritRate = skill.critRate;
+
+  // 【構想2：確変システムの拡張ポイント①】
+  // 現在：確変モード中なら会心率を「80%」に大幅アップしています。
+  // TODO: 確変中に会心が出たらさらに威力を3倍にする、確変ターンが1ターン延びるなど改造してみましょう！
+  if (state.player.isFever) {
+    currentCritRate = 80;
+  }
+
+  const isCrit = checkProbability(currentCritRate);
+
+  // --- ステップC: ダメージ計算 ---
+  let damage = skill.baseDamage;
+
+  if (isCrit) {
+    damage = Math.floor(damage * 2.0); // 会心の一撃はダメージ2倍
+    addLog(`⚡ かいしんの一撃！！ (判定確率:${currentCritRate}%)`, "log-crit");
+  }
+
+  // 敵のHPを減らす
+  state.enemy.hp = Math.max(0, state.enemy.hp - damage);
+
+  // 斬撃アニメーション＆ダメージポップアップを表示
+  await playSlashOnEnemy(damage, isCrit);
+  addLog(`キングスライムに ${damage} のダメージを与えた！`);
+
+  // --- ステップD: 確変モード突入の抽選 ---
+  // 【構想2：確変システムの拡張ポイント②】
+  const feverTriggerChance = skill.feverChance || 10; // スキル固有の確率がなければ10%で抽選
+
+  if (
+    !state.player.isFever &&
+    state.enemy.hp > 0 &&
+    checkProbability(feverTriggerChance)
+  ) {
+    await wait(300);
+    state.player.isFever = true;
+    state.player.feverTurns = 3; // 3ターンの間、確変モード継続
+    addLog(
+      `🔥【確変突入】運命の扉が開いた！3ターンの間、会心率が80%に激増！`,
+      "log-fever",
+    );
+  }
+}
+
+// =========================================================================
+// 【構想4：敵のAI行動】内部のダイス（乱数）で敵の行動を決定する箇所
+// =========================================================================
+async function executeEnemyTurn() {
+  addLog(`▼ キングスライムのターン！`, "log-enemy");
+  await wait(450);
+
+  // 1〜100のダイスを振って敵の行動を決める
+  const aiDice = rollDice100();
+
+  // 【構想4：敵AIの拡張ポイント】
+  // TODO: ダイスの出目によって「1〜50: 通常攻撃」「51〜80: のしかかり(強攻撃)」「81〜100: ホイミ(回復)」などに分岐させてみましょう！
+  if (aiDice <= 70) {
+    // 70%の確率で体当たり攻撃
+    const enemyDamage = 15;
+    state.player.hp = Math.max(0, state.player.hp - enemyDamage);
+
+    await playEnemyAttackEffect(); // 敵の突進＆画面シェイク演出
+    addLog(
+      `キングスライムの体当たり！ ゆうしゃは ${enemyDamage} のダメージを受けた！ (AIダイス:${aiDice})`,
+      "log-enemy",
+    );
+  } else {
+    // 30%の確率で様子を見る
+    addLog(`キングスライムは不敵に笑って様子を見ている… (AIダイス:${aiDice})`);
+  }
+}
+
+// =========================================================================
+// 【構想3：状態管理の実装】ターン経過による確変・バフのカウントダウン処理
+// =========================================================================
+function processTurnEnd() {
+  state.turn += 1;
+
+  // 確変モードの残りターンを減らす処理
+  if (state.player.isFever) {
+    state.player.feverTurns -= 1;
+
+    if (state.player.feverTurns <= 0) {
+      state.player.isFever = false;
+      addLog(`✨ 確変モードの効果が切れた…。`);
+    }
+  }
+
+  // 【構想3：状態管理の拡張ポイント】
+  // TODO: 攻撃力バフ（state.player.attackBuffTurns）などのターン経過処理をここに追加してみましょう！
+}
+
+// =========================================================================
+// 勝敗判定・ゲームリセット処理
+// =========================================================================
+function checkBattleEnd() {
+  if (state.enemy.hp <= 0) {
+    addLog(`🎉 キングスライムをやっつけた！ ゆうしゃの勝利！`, "log-crit");
+    state.isGameOver = true;
+    return true;
+  }
+  if (state.player.hp <= 0) {
+    addLog(`💀 ゆうしゃは力尽きてしまった… ゲームオーバー。`, "log-enemy");
+    state.isGameOver = true;
+    return true;
+  }
+  return false;
+}
+
+function resetGame() {
+  if (state.isProcessing) return; // アニメーション中はリセット不可
+
+  state.turn = 1;
+  state.phase = "player";
+  state.isGameOver = false;
+  state.player.hp = state.player.maxHp;
+  state.player.isFever = false;
+  state.player.feverTurns = 0;
+  state.player.attackBuffTurns = 0;
+  state.enemy.hp = state.enemy.maxHp;
+
+  document.getElementById("battle-log").innerHTML = "";
+  addLog("野生の キングスライム があらわれた！ コマンドを選択してください。");
+  updateUI();
+}
+
+// =========================================================================
+// ▼ ここから下は【UI描画・エフェクト演出用の裏方コード】です ▼
+// ※ここは既に完成しているので、学習中は無理に読んだり編集したりしなくて大丈夫です！
+// =========================================================================
+
+/**
+ * 指定したミリ秒だけ処理を待つ関数（ターンの間を作るために使用）
+ */
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 敵への斬撃エフェクト＆ダメージポップアップ演出
+ */
+async function playSlashOnEnemy(damage, isCrit) {
+  const slashEl = document.getElementById("slash-effect");
+  const enemySprite = document.getElementById("enemy-sprite");
+  const popupEl = document.getElementById("damage-popup");
+  const gameScreen = document.getElementById("game-screen");
+
+  // 斬撃エフェクト表示
+  slashEl.classList.remove("active");
+  void slashEl.offsetWidth; // リフローさせてアニメーションを再発火
+  slashEl.classList.add("active");
+
+  if (isCrit) {
+    gameScreen.classList.add("crit-flash");
+    setTimeout(() => gameScreen.classList.remove("crit-flash"), 400);
+  }
+
+  await wait(150);
+
+  // 敵の点滅とダメージ数字ポップアップ
+  enemySprite.classList.add("enemy-hit");
+  popupEl.textContent = damage;
+  popupEl.className = `damage-popup show ${isCrit ? "crit" : ""}`;
+
+  updateUI(); // HPバーをここでスッと減らす
+
+  await wait(450);
+  enemySprite.classList.remove("enemy-hit");
+}
+
+/**
+ * 攻撃ミス時のポップアップ演出
+ */
+async function playMissEffect() {
+  const popupEl = document.getElementById("damage-popup");
+  popupEl.textContent = "MISS!";
+  popupEl.className = "damage-popup miss show";
+  await wait(500);
+}
+
+/**
+ * 敵の攻撃モーション＆画面シェイク演出
+ */
+async function playEnemyAttackEffect() {
+  const enemySprite = document.getElementById("enemy-sprite");
+  const gameScreen = document.getElementById("game-screen");
+
+  enemySprite.classList.add("enemy-attack-motion");
+  await wait(220);
+
+  // 画面全体をガタガタ揺らす（ドラクエ風の被弾演出）
+  gameScreen.classList.remove("screen-shake");
+  void gameScreen.offsetWidth;
+  gameScreen.classList.add("screen-shake");
+
+  updateUI(); // プレイヤーのHPバーを減らす
+  await wait(350);
+  enemySprite.classList.remove("enemy-attack-motion");
+}
+
+/**
+ * state（状態）の数値をHTML画面のゲージや文字に反映する関数
+ */
+function updateUI() {
+  // 1. プレイヤー・敵のHP数値とバーの幅を更新
+  document.getElementById("player-hp").textContent = state.player.hp;
+  document.getElementById("player-max-hp").textContent = state.player.maxHp;
+  const playerHpPercent = (state.player.hp / state.player.maxHp) * 100;
+  const playerBar = document.getElementById("player-hp-bar");
+  playerBar.style.width = `${playerHpPercent}%`;
+  playerBar.classList.toggle("low", playerHpPercent <= 30);
+
+  document.getElementById("enemy-hp").textContent = state.enemy.hp;
+  document.getElementById("enemy-max-hp").textContent = state.enemy.maxHp;
+  const enemyHpPercent = (state.enemy.hp / state.enemy.maxHp) * 100;
+  const enemyBar = document.getElementById("enemy-hp-bar");
+  enemyBar.style.width = `${enemyHpPercent}%`;
+  enemyBar.classList.toggle("low", enemyHpPercent <= 30);
+
+  // 敵が倒れたら半透明にする
+  document.getElementById("enemy-sprite").style.opacity =
+    state.enemy.hp <= 0 ? "0.2" : "1";
+
+  // 2. ターン数と現在の行動フェーズ表示
+  document.getElementById("turn-count").textContent = state.turn;
+  const phaseEl = document.getElementById("phase-indicator");
+  if (state.isGameOver) {
+    phaseEl.textContent = "バトル終了";
+    phaseEl.className = "phase-badge";
+  } else if (state.phase === "player") {
+    phaseEl.textContent = "あなたのターン";
+    phaseEl.className = "phase-badge phase-player";
+  } else {
+    phaseEl.textContent = "敵のターン";
+    phaseEl.className = "phase-badge phase-enemy";
+  }
+
+  // 3. 確変モードとバフの表示切り替え
+  const stateBadge = document.getElementById("player-state-badge");
+  const gameScreen = document.getElementById("game-screen");
+
+  if (state.player.isFever) {
+    stateBadge.textContent = `🔥確変中 (残${state.player.feverTurns}T)`;
+    stateBadge.className = "status-badge fever";
+    gameScreen.classList.add("fever-mode");
+  } else {
+    stateBadge.textContent = "通常";
+    stateBadge.className = "status-badge";
+    gameScreen.classList.remove("fever-mode");
+  }
+
+  const buffBadge = document.getElementById("player-buff-badge");
+  if (state.player.attackBuffTurns > 0) {
+    buffBadge.style.display = "inline-block";
+    buffBadge.textContent = `⚔️攻撃UP (${state.player.attackBuffTurns}T)`;
+  } else {
+    buffBadge.style.display = "none";
+  }
+
+  // 4. 敵のターン中やゲーム終了時はコマンドボタンをロック
+  const actionButtons = ["btn-normal", "btn-heavy", "btn-gamble"];
+  const shouldDisable = state.isProcessing || state.isGameOver;
+  actionButtons.forEach((id) => {
+    document.getElementById(id).disabled = shouldDisable;
+  });
+}
+
+/**
+ * バトルログにメッセージを追加する関数
+ */
+function addLog(message, className = "") {
+  const logContainer = document.getElementById("battle-log");
+  const line = document.createElement("div");
+  line.className = `log-line ${className}`;
+  line.textContent = message;
+  logContainer.appendChild(line);
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// 初回読み込み時にゲームを初期化
+window.onload = function () {
+  resetGame();
+};

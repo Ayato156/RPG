@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>確率操作コマンドRPG</title>
+
+    <!-- ここで style.css を読み込みます -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div id="game-screen" class="game-screen">
+      <!-- 1. 上部：ステータス＆現在のターン表示 -->
+      <div class="top-bar">
+        <!-- 勇者のステータス -->
+        <div class="dq-window player-status-win">
+          <div class="hero-avatar" title="勇者">
+            <!-- 勇者の兜・剣アイコン（SVG） -->
+            <svg width="46" height="46" viewBox="0 0 64 64" fill="none">
+              <path
+                d="M32 6L12 18V34C12 46 21 55 32 58C43 55 52 46 52 34V18L32 6Z"
+                fill="#2980b9"
+                stroke="#fff"
+                stroke-width="3"
+              />
+              <path d="M32 6V58C43 55 52 46 52 34V18L32 6Z" fill="#3498db" />
+              <path
+                d="M22 24L32 16L42 24"
+                stroke="#ffd700"
+                stroke-width="4"
+                stroke-linecap="round"
+              />
+              <circle cx="32" cy="34" r="6" fill="#ffd700" />
+            </svg>
+          </div>
+          <div class="player-info">
+            <div class="player-name-row">
+              <span class="player-name">ゆうしゃ</span>
+              <span id="player-state-badge" class="status-badge">通常</span>
+              <span
+                id="player-buff-badge"
+                class="status-badge buff"
+                style="display: none"
+                >攻撃UP</span
+              >
+            </div>
+            <div class="hp-bar-wrap">
+              <span class="hp-label"
+                >HP <span id="player-hp">100</span>/<span id="player-max-hp"
+                  >100</span
+                ></span
+              >
+              <div class="bar-bg">
+                <div id="player-hp-bar" class="bar-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ターン＆行動フェーズ表示 -->
+        <div class="dq-window turn-win">
+          <div class="turn-num">TURN <strong id="turn-count">1</strong></div>
+          <div id="phase-indicator" class="phase-badge phase-player">
+            あなたのターン
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 中央：バトルフィールド（モンスター＆エフェクト） -->
+      <div id="battle-field" class="battle-field">
+        <div class="enemy-stage">
+          <!-- ダメージポップアップ表示用 -->
+          <div id="damage-popup" class="damage-popup">0</div>
+
+          <!-- 斬撃エフェクト（SVG） -->
+          <svg id="slash-effect" class="slash-effect" viewBox="0 0 100 100">
+            <path
+              d="M10 90 Q 50 40 90 10"
+              stroke="#fff"
+              stroke-width="8"
+              stroke-linecap="round"
+              fill="none"
+            />
+            <path
+              d="M15 85 Q 50 40 85 15"
+              stroke="#ffd700"
+              stroke-width="4"
+              stroke-linecap="round"
+              fill="none"
+            />
+          </svg>
+
+          <!-- モンスターのイラスト（キングスライム風SVG） -->
+          <div id="enemy-sprite" class="enemy-sprite-wrap">
+            <svg width="115" height="110" viewBox="0 0 120 115">
+              <!-- 王冠 -->
+              <path
+                d="M38 32 L32 14 L48 22 L60 10 L72 22 L88 14 L82 32 Z"
+                fill="#ffd700"
+                stroke="#b8860b"
+                stroke-width="2.5"
+              />
+              <circle cx="60" cy="24" r="4" fill="#ff4757" />
+              <!-- スライムの体 -->
+              <path
+                d="M60 26 C85 38, 108 58, 108 82 C108 100, 88 108, 60 108 C32 108, 12 100, 12 82 C12 58, 35 38, 60 26 Z"
+                fill="#00a8ff"
+                stroke="#ffffff"
+                stroke-width="3"
+              />
+              <!-- ハイライト（ツヤ） -->
+              <ellipse
+                cx="38"
+                cy="60"
+                rx="10"
+                ry="6"
+                transform="rotate(-25 38 60)"
+                fill="rgba(255,255,255,0.55)"
+              />
+              <!-- 目 -->
+              <circle
+                cx="44"
+                cy="72"
+                r="7.5"
+                fill="#fff"
+                stroke="#000"
+                stroke-width="2"
+              />
+              <circle cx="44" cy="72" r="3.5" fill="#000" />
+              <circle
+                cx="76"
+                cy="72"
+                r="7.5"
+                fill="#fff"
+                stroke="#000"
+                stroke-width="2"
+              />
+              <circle cx="76" cy="72" r="3.5" fill="#000" />
+              <!-- 口 -->
+              <path
+                d="M46 88 Q60 98 74 88"
+                fill="none"
+                stroke="#ff4757"
+                stroke-width="4"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+
+          <!-- 敵のHPプレート -->
+          <div class="enemy-plate">
+            <div class="enemy-name">
+              <span>キングスライム</span>
+              <span class="enemy-hp-text"
+                >HP <span id="enemy-hp">150</span>/<span id="enemy-max-hp"
+                  >150</span
+                ></span
+              >
+            </div>
+            <div class="bar-bg">
+              <div id="enemy-hp-bar" class="bar-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 下部：コマンド選択＆バトルログ -->
+      <div class="bottom-area">
+        <!-- 左：ドラクエ風コマンドウィンドウ -->
+        <div class="dq-window command-win">
+          <div>
+            <div class="command-title">コマンド？</div>
+            <div class="command-list">
+              <button
+                id="btn-normal"
+                class="dq-btn"
+                onclick="handlePlayerCommand('normal')"
+              >
+                たたかう
+                <span class="sub-info">命中90% / 会心15% / 威力18</span>
+              </button>
+              <button
+                id="btn-heavy"
+                class="dq-btn"
+                onclick="handlePlayerCommand('heavy')"
+              >
+                まじんぎり
+                <span class="sub-info">命中50% / 会心45% / 威力32</span>
+              </button>
+              <button
+                id="btn-gamble"
+                class="dq-btn"
+                onclick="handlePlayerCommand('gamble')"
+              >
+                運命のダイス
+                <span class="sub-info">命中100% / 確変突入45%</span>
+              </button>
+            </div>
+          </div>
+          <button class="reset-btn" onclick="resetGame()">
+            🔄 最初からやり直す
+          </button>
+        </div>
+
+        <!-- 右：メッセージウィンドウ -->
+        <div class="dq-window message-win">
+          <div id="battle-log" class="log-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 画面全体の閉じタグ -->
+
+    <!-- ここで main.js を読み込みます -->
+    <script src="main.js"></script>
+  </body>
+</html>
