@@ -55,6 +55,16 @@
                 <div id="player-hp-bar" class="bar-fill"></div>
               </div>
             </div>
+            <div class="hp-bar-wrap" style="margin-top: 6px">
+              <span class="mp-label"
+                >MP <span id="player-mp">30</span>/<span id="player-max-mp"
+                  >30</span
+                ></span
+              >
+              <div class="bar-bg">
+                <div id="player-mp-bar" class="mp-bar-fill"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -183,45 +193,96 @@
                   <span class="sub-info">特殊技・魔法を選択</span>
                 </button>
               </div>
+              <!-- 戦うを押したときに開くメニュー（中央ポップアップ） -->
+              <div id="menu-attack" class="menu-popup" style="display: none">
+                <div class="popup-title">⚔️ こうげき を えらぶ</div>
+                <div class="popup-grid">
+                  <button
+                    id="btn-normal"
+                    class="dq-btn"
+                    onclick="handlePlayerCommand('normal')"
+                  >
+                    こうげき
+                    <span class="sub-info">威力18 / 命中90%</span>
+                  </button>
 
-              <!--戦うを押したときに開くメニュー-->
-              <div id="menu-attack" style="display: none">
-                <button
-                  id="btn-normal"
-                  class="dq-btn"
-                  onclick="handlePlayerCommand('normal')"
-                >
-                  こうげき
-                  <span class="sub-info">命中90% / 会心15% / 威力18</span>
-                </button>
+                  <button
+                    id="btn-heavy"
+                    class="dq-btn"
+                    onclick="handlePlayerCommand('heavy')"
+                  >
+                    まじんぎり
+                    <span class="sub-info">威力32 / 命中50%</span>
+                  </button>
 
-                <button
-                  id="btn-heavy"
-                  class="dq-btn"
-                  onclick="handlePlayerCommand('heavy')"
-                >
-                  まじんぎり
-                  <span class="sub-info">命中50% / 会心45% / 威力32</span>
-                </button>
-                <button class="dq-btn" onclick="openMenu('main')">
-                  ↩もどる
-                </button>
+                  <button
+                    id="btn-charge"
+                    class="dq-btn col-span-2"
+                    onclick="handlePlayerCommand('charge')"
+                  >
+                    ためる
+                    <span class="sub-info">次ターンの攻撃ダメージが2倍！</span>
+                  </button>
+
+                  <button class="dq-btn col-span-2" onclick="openMenu('main')">
+                    ↩ もどる
+                  </button>
+                </div>
               </div>
 
-              <!--呪文を押したとき-->
-              <div id="menu-magic" style="display: none">
-                <button
-                  id="btn-gamble"
-                  class="dq-btn"
-                  onclick="handlePlayerCommand('gamble')"
-                >
-                  運命のダイス
-                  <span class="sub-info">命中100% / 確変突入45%</span>
-                </button>
+              <!-- 呪文を押したとき（中央ポップアップ） -->
+              <div id="menu-magic" class="menu-popup" style="display: none">
+                <div class="popup-title">✨ じゅもん を えらぶ</div>
+                <div class="popup-grid">
+                  <button
+                    id="btn-mera"
+                    class="dq-btn"
+                    onclick="handlePlayerCommand('mera')"
+                  >
+                    メラ
+                    <span class="sub-info">消費MP 5 / 必中25</span>
+                  </button>
 
-                <button class="dq-btn" onclick="openMenu('main')">
-                  ↩もどる
-                </button>
+                  <button
+                    id="btn-hoimi"
+                    class="dq-btn"
+                    onclick="handlePlayerCommand('hoimi')"
+                  >
+                    ホイミ
+                    <span class="sub-info">消費MP 5 / 回復30</span>
+                  </button>
+
+                  <button
+                    id="btn-baikiruto"
+                    class="dq-btn"
+                    onclick="handlePlayerCommand('baikiruto')"
+                  >
+                    バイキルト
+                    <span class="sub-info">消費MP 8 / 攻撃1.5倍</span>
+                  </button>
+
+                  <button
+                    id="btn-rukani"
+                    class="dq-btn"
+                    onclick="handlePlayerCommand('rukani')"
+                  >
+                    ルカニ
+                    <span class="sub-info">消費MP 5 / 防御DOWN</span>
+                  </button>
+
+                  <button
+                    id="btn-gamble"
+                    class="dq-btn col-span-2"
+                    onclick="handlePlayerCommand('gamble')"
+                  >
+                    運命のダイス
+                    <span class="sub-info">命中100% / 確変突入45%</span>
+                  </button>
+
+                  <button class="dq-btn col-span-2" onclick="openMenu('main')">
+                    ↩ もどる
+                  </button>
+                </div>
               </div>
             </div>
           </div>

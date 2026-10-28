@@ -16,15 +16,19 @@ const state = {
   player: {
     hp: 100,
     maxHp: 100,
+    mp: 30,
+    maxMp: 30,
     isFever: false, // 確変モード中かどうか
     feverTurns: 0, // 確変モードの残りターン数
     attackBuffTurns: 0, // 【拡張用】攻撃力アップなどのバフ残りターン数
+    isCharged: false,
   },
 
   // 敵の状態
   enemy: {
     hp: 150,
     maxHp: 150,
+    defenseDbuffTurns: 0,
   },
 };
 
@@ -51,6 +55,19 @@ const skills = {
     critRate: 10,
     feverChance: 45, // この技を使った時に確変へ突入する確率（%）
   },
+
+  charge: { name: "ためる", type: "charge" },
+  mera: {
+    name: "メラ",
+    baseDamage: 25,
+    hitRate: 100,
+    critRate: 5,
+    mpCost: 5,
+    type: "attack",
+  },
+  hoimi: { name: "ホイミ", healAmount: 30, mpCost: 5, type: "heal" },
+  baikiruto: { name: "バイキルト", mpCost: 8, type: "buff" },
+  rukani: { name: "ルカニ", mpCost: 5, type: "debuff" },
 };
 
 // =========================================================================
@@ -80,6 +97,17 @@ function checkProbability(percent) {
 async function handlePlayerCommand(skillKey) {
   // 処理中やゲーム終了時はボタンを押せないようにガード
   if (state.isProcessing || state.isGameOver) return;
+
+  const skill = skills[skillKey];
+
+  if (skill.mpCost && state.player.mp < skill.mpCost) {
+    addLog(`MPが足りない!`);
+    return;
+  }
+
+  if (skill.mpCost) {
+    state.player.mp -= skill.mpCost;
+  }
 
   openMenu("main");
 
@@ -134,6 +162,32 @@ async function executePlayerAttack(skillKey) {
   addLog(`ゆうしゃの「${skill.name}」！`);
   await wait(400);
 
+  //特殊技の処理
+  if (skill.type === "charge") {
+    state.player.isCharged = true;
+    addLog(`ゆうしゃはチカラをためている! 次の攻撃ダメージは2倍!`);
+    return;
+  }
+  if (skill.type === "heal") {
+    state.player.hp = Math.min(
+      state.player.maxHp,
+      state.player.hp + skill.healAmount,
+    );
+    addLog(`ゆうしゃのHPが${skill.healAmount}回復した!`);
+    await wait(300);
+    return;
+  }
+  if (skill.type === "buff") {
+    state.player.attackBuffTurns = 4;
+    addLog(`ゆうしゃの攻撃力がアップした!（3ターン）`);
+    return;
+  }
+  if (skill.type === "debuff") {
+    state.enemy.defenseDebuffTurns = 4;
+    addLog(`キングスライムの防御力が下がった!（3ターン）`);
+    return;
+  }
+
   // --- ステップA: 命中判定 ---
   // 【拡張アイデア】確変中（state.player.isFever が true の時）は必中（100%）にする改造もおすすめ！
   const isHit = checkProbability(skill.hitRate);
@@ -161,6 +215,18 @@ async function executePlayerAttack(skillKey) {
 
   // --- ステップC: ダメージ計算 ---
   let damage = skill.baseDamage;
+
+  //バフデバフためるのダメージ計算
+  if (state.player.isCharged) {
+    damage = Math.floor(damage * 2.0);
+    state.player.isCharged = false;
+  }
+  if (state.player.attackBuffTurns > 0) {
+    damage = Math.floor(damage * 1.5);
+  }
+  if (state.enemy.defenseDebuffTurns > 0) {
+    damage = Math.floor(damage * 1.5);
+  }
 
   if (isCrit) {
     damage = Math.floor(damage * 2.0); // 会心の一撃はダメージ2倍
@@ -237,9 +303,22 @@ function processTurnEnd() {
     }
   }
 
-  // 【構想3：状態管理の拡張ポイント】
-  // TODO: 攻撃力バフ（state.player.attackBuffTurns）などのターン経過処理をここに追加してみましょう！
-}
+  // 攻撃力バフのターン経過と終了通知
+  if (state.player.attackBuffTurns > 0) {
+    state.player.attackBuffTurns -= 1;
+    if (state.player.attackBuffTurns <= 0) {
+      addLog(`🔻 ゆうしゃの攻撃力アップの効果が切れた。`);
+    }
+  }
+
+  // 敵の防御デバフのターン経過と終了通知
+  if (state.enemy.defenseDebuffTurns > 0) {
+    state.enemy.defenseDebuffTurns -= 1;
+    if (state.enemy.defenseDebuffTurns <= 0) {
+      addLog(`🛡️ キングスライムの防御力が元に戻った。`);
+    }
+  }
+} // ← これが processTurnEnd 関数全体を閉じるカッコです
 
 // =========================================================================
 // 勝敗判定・ゲームリセット処理
@@ -265,10 +344,13 @@ function resetGame() {
   state.phase = "player";
   state.isGameOver = false;
   state.player.hp = state.player.maxHp;
+  state.player.mp = state.player.maxMp;
   state.player.isFever = false;
   state.player.feverTurns = 0;
   state.player.attackBuffTurns = 0;
+  state.player.isCharged = false;
   state.enemy.hp = state.enemy.maxHp;
+  state.enemy.defenseDebuffTurns = 0;
 
   document.getElementById("battle-log").innerHTML = "";
   addLog("野生の キングスライム があらわれた！ コマンドを選択してください。");
@@ -382,8 +464,18 @@ function updateUI() {
   playerBar.style.width = `${playerHpPercent}%`;
   playerBar.classList.toggle("low", playerHpPercent <= 30);
 
+  // ▼ ★ここに追加：MPの数値とバーの更新
+  document.getElementById("player-mp").textContent = state.player.mp;
+  document.getElementById("player-max-mp").textContent = state.player.maxMp;
+  const playerMpPercent = (state.player.mp / state.player.maxMp) * 100;
+  const playerMpBar = document.getElementById("player-mp-bar");
+  playerMpBar.style.width = `${playerMpPercent}%`;
+  playerMpBar.classList.toggle("low", playerMpPercent <= 30);
+
   document.getElementById("enemy-hp").textContent = state.enemy.hp;
   document.getElementById("enemy-max-hp").textContent = state.enemy.maxHp;
+  document.getElementById("player-mp").textContent = state.player.mp;
+  document.getElementById("player-max-mp").textContent = state.player.maxMp;
   const enemyHpPercent = (state.enemy.hp / state.enemy.maxHp) * 100;
   const enemyBar = document.getElementById("enemy-hp-bar");
   enemyBar.style.width = `${enemyHpPercent}%`;

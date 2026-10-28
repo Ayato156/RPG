@@ -184,6 +184,26 @@ body {
   background: linear-gradient(90deg, #e74c3c, #f39c12);
 }
 
+/* --- ★ここから追加：MPバー用の色 --- */
+.mp-label {
+  font-weight: bold;
+  color: #3498db; /* MPっぽい青色 */
+  min-width: 95px;
+}
+
+.mp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #0984e3);
+  width: 100%;
+  transition:
+    width 0.35s ease-out,
+    background 0.3s;
+}
+
+.mp-bar-fill.low {
+  background: linear-gradient(90deg, #9b59b6, #8e44ad); /* ピンチの時は紫色に */
+}
+
 /* ターン＆フェーズ表示ウィンドウ */
 .turn-win {
   min-width: 150px;
@@ -661,4 +681,51 @@ body {
   100% {
     filter: brightness(1) contrast(1);
   }
+}
+
+/* =========================================================================
+   サブメニュー（たたかう・じゅもん）の中央ポップアップ
+   ========================================================================= */
+.game-screen {
+  position: relative; /* 中央配置の基準にするため */
+}
+
+/* 中央に浮かび上がるポップアップウィンドウ */
+
+.menu-popup {
+  position: absolute; /* ★ここを absolute から fixed に変更！ */
+  top: -30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 999;
+  width: 90%;
+  max-width: 320px;
+  background: rgba(10, 15, 30, 0.95); /* 引き締まったダークブルー */
+  border: 3px solid #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+}
+
+/* ポップアップの見出し */
+.popup-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+  border-bottom: 2px solid #444;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+/* ボタンを2列（グリッド）でスッキリ並べる */
+.popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* もどるボタンや運命のダイスなど、横いっぱいに広げたいボタン */
+.col-span-2 {
+  grid-column: span 2;
 }
