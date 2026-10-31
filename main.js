@@ -266,24 +266,70 @@ async function executeEnemyTurn() {
   addLog(`▼ キングスライムのターン！`, "log-enemy");
   await wait(450);
 
-  // 1〜100のダイスを振って敵の行動を決める
+  // 1〜100のダイスを振る
   const aiDice = rollDice100();
 
-  // 【構想4：敵AIの拡張ポイント】
-  // TODO: ダイスの出目によって「1〜50: 通常攻撃」「51〜80: のしかかり(強攻撃)」「81〜100: ホイミ(回復)」などに分岐させてみましょう！
-  if (aiDice <= 70) {
-    // 70%の確率で体当たり攻撃
-    const enemyDamage = 15;
-    state.player.hp = Math.max(0, state.player.hp - enemyDamage);
+  // 敵のHPが50%以上かどうかをチェック（true か false が入る）
+  const isHpHigh = state.enemy.hp >= state.enemy.maxHp * 0.5;
 
-    await playEnemyAttackEffect(); // 敵の突進＆画面シェイク演出
-    addLog(
-      `キングスライムの体当たり！ ゆうしゃは ${enemyDamage} のダメージを受けた！ (AIダイス:${aiDice})`,
-      "log-enemy",
-    );
+  let actionType = ""; // どの行動をするかを入れる箱
+
+  // ==========================================
+  // ① 行動パターンの決定
+  // ==========================================
+  if (isHpHigh) {
+    // 【HPが50%以上のとき】
+    if (aiDice <= 30) {
+      actionType = "heavy"; // 30%で強攻撃 (1〜30)
+    } else {
+      actionType = "normal"; // 70%で弱攻撃 (31〜100)
+    }
   } else {
-    // 30%の確率で様子を見る
-    addLog(`キングスライムは不敵に笑って様子を見ている… (AIダイス:${aiDice})`);
+    // 【HPが50%未満のとき】
+    if (aiDice <= 30) {
+      actionType = "heal"; // 30%で回復 (1〜30)
+    } else if (aiDice <= 50) {
+      actionType = "heavy"; // 20%で強攻撃 (31〜50)
+    } else {
+      actionType = "normal"; // 50%で弱攻撃 (51〜100)
+    }
+  }
+
+  // ==========================================
+  // ② 決定した行動の実行
+  // ==========================================
+  if (actionType === "heal") {
+    const healAmount = 40;
+    state.enemy.hp = Math.min(state.enemy.maxHp, state.enemy.hp + healAmount);
+    addLog(
+      `キングスライムは「ベホイミ」をとなえた！ HPが ${healAmount} 回復！ (AI:${aiDice})`,
+    );
+  } else if (actionType === "heavy") {
+    addLog(`キングスライムの おしつぶすこうげき！ (AI:${aiDice})`);
+    await wait(400); // 少しタメを作る
+
+    // 強攻撃は外れやすい（命中率50%と設定）
+    if (checkProbability(50)) {
+      const heavyDmg = 35;
+      state.player.hp = Math.max(0, state.player.hp - heavyDmg);
+      await playEnemyAttackEffect();
+      addLog(`痛恨の一撃！ ゆうしゃに ${heavyDmg} の大ダメージ！`, "log-enemy");
+    } else {
+      addLog(`しかし ゆうしゃ はひらりと身をかわした！`);
+    }
+  } else if (actionType === "normal") {
+    addLog(`キングスライムの体当たり！ (AI:${aiDice})`);
+    await wait(300); // 少しタメを作る
+
+    // 命中率80%（20%の確率で外れる）
+    if (checkProbability(80)) {
+      const normalDmg = 15;
+      state.player.hp = Math.max(0, state.player.hp - normalDmg);
+      await playEnemyAttackEffect();
+      addLog(`ゆうしゃに ${normalDmg} のダメージ！`, "log-enemy");
+    } else {
+      addLog(`しかし 攻撃は外れた！`);
+    }
   }
 }
 
