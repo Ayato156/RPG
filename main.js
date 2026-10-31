@@ -14,8 +14,8 @@ const state = {
 
   // プレイヤーの状態
   player: {
-    hp: 100,
-    maxHp: 100,
+    hp: 120,
+    maxHp: 120,
     mp: 30,
     maxMp: 30,
     isFever: false, // 確変モード中かどうか
@@ -26,9 +26,10 @@ const state = {
 
   // 敵の状態
   enemy: {
-    hp: 150,
-    maxHp: 150,
+    hp: 200,
+    maxHp: 200,
     defenseDbuffTurns: 0,
+    healCount: 4,
   },
 };
 
@@ -48,13 +49,6 @@ const skills = {
     hitRate: 50, // 当たりにくいが大ダメージ＆高クリティカル
     critRate: 45,
   },
-  gamble: {
-    name: "運命のダイス",
-    baseDamage: 8,
-    hitRate: 100,
-    critRate: 10,
-    feverChance: 45, // この技を使った時に確変へ突入する確率（%）
-  },
 
   charge: { name: "ためる", type: "charge" },
   mera: {
@@ -65,8 +59,8 @@ const skills = {
     mpCost: 5,
     type: "attack",
   },
-  hoimi: { name: "ホイミ", healAmount: 30, mpCost: 5, type: "heal" },
-  baikiruto: { name: "バイキルト", mpCost: 8, type: "buff" },
+  hoimi: { name: "ホイミ", healAmount: 40, mpCost: 5, type: "heal" },
+  baikiruto: { name: "バイキルト", mpCost: 5, type: "buff" },
   rukani: { name: "ルカニ", mpCost: 5, type: "debuff" },
 };
 
@@ -179,18 +173,28 @@ async function executePlayerAttack(skillKey) {
   }
   if (skill.type === "buff") {
     state.player.attackBuffTurns = 4;
-    addLog(`ゆうしゃの攻撃力がアップした!（3ターン）`);
+    addLog(`ゆうしゃの攻撃力がアップした！ (3ターン)`);
     return;
   }
   if (skill.type === "debuff") {
-    state.enemy.defenseDebuffTurns = 4;
-    addLog(`キングスライムの防御力が下がった!（3ターン）`);
+    // ★ 命中率40%の判定
+    if (checkProbability(40)) {
+      state.enemy.defenseDebuffTurns = 4;
+      addLog(`キングスライムの防御力が下がった！ (3ターン)`);
+    } else {
+      await playMissEffect(); // ミス演出
+      addLog(
+        `しかし キングスライムには効かなかった！ (命中率:40%)`,
+        "log-miss",
+      );
+    }
     return;
   }
 
   // --- ステップA: 命中判定 ---
   // 【拡張アイデア】確変中（state.player.isFever が true の時）は必中（100%）にする改造もおすすめ！
-  const isHit = checkProbability(skill.hitRate);
+  const hitChance = state.player.isFever ? 100 : skill.hitRate;
+  const isHit = checkProbability(hitChance);
 
   if (!isHit) {
     await playMissEffect(); // ミス演出を再生
@@ -222,10 +226,10 @@ async function executePlayerAttack(skillKey) {
     state.player.isCharged = false;
   }
   if (state.player.attackBuffTurns > 0) {
-    damage = Math.floor(damage * 1.5);
+    damage = Math.floor(damage * 1.25);
   }
   if (state.enemy.defenseDebuffTurns > 0) {
-    damage = Math.floor(damage * 1.5);
+    damage = Math.floor(damage * 1.7);
   }
 
   if (isCrit) {
@@ -242,7 +246,7 @@ async function executePlayerAttack(skillKey) {
 
   // --- ステップD: 確変モード突入の抽選 ---
   // 【構想2：確変システムの拡張ポイント②】
-  const feverTriggerChance = skill.feverChance || 10; // スキル固有の確率がなければ10%で抽選
+  const feverTriggerChance = 5; // スキル固有の確率がなければ10%で抽選
 
   if (
     !state.player.isFever &&
@@ -251,9 +255,9 @@ async function executePlayerAttack(skillKey) {
   ) {
     await wait(300);
     state.player.isFever = true;
-    state.player.feverTurns = 3; // 3ターンの間、確変モード継続
+    state.player.feverTurns = 4; // 3ターンの間、確変モード継続
     addLog(
-      `🔥【確変突入】運命の扉が開いた！3ターンの間、会心率が80%に激増！`,
+      `🔥【確変突入】運命の扉が開いた！3ターンの間、どの技も必中＆会心率が80%に激増！`,
       "log-fever",
     );
   }
@@ -287,7 +291,12 @@ async function executeEnemyTurn() {
   } else {
     // 【HPが50%未満のとき】
     if (aiDice <= 30) {
-      actionType = "heal"; // 30%で回復 (1〜30)
+      // 残り回数があれば回復、使い切っていたら通常攻撃へ切り替え
+      if (state.enemy.healCount > 0) {
+        actionType = "heal";
+      } else {
+        actionType = "normal";
+      }
     } else if (aiDice <= 50) {
       actionType = "heavy"; // 20%で強攻撃 (31〜50)
     } else {
@@ -299,7 +308,7 @@ async function executeEnemyTurn() {
   // ② 決定した行動の実行
   // ==========================================
   if (actionType === "heal") {
-    const healAmount = 40;
+    const healAmount = 60;
     state.enemy.hp = Math.min(state.enemy.maxHp, state.enemy.hp + healAmount);
     addLog(
       `キングスライムは「ベホイミ」をとなえた！ HPが ${healAmount} 回復！ (AI:${aiDice})`,
@@ -397,6 +406,7 @@ function resetGame() {
   state.player.isCharged = false;
   state.enemy.hp = state.enemy.maxHp;
   state.enemy.defenseDebuffTurns = 0;
+  state.enemy.healCount = 4;
 
   document.getElementById("battle-log").innerHTML = "";
   addLog("野生の キングスライム があらわれた！ コマンドを選択してください。");
@@ -568,7 +578,7 @@ function updateUI() {
   }
 
   // 4. 敵のターン中やゲーム終了時はコマンドボタンをロック
-  const actionButtons = ["btn-normal", "btn-heavy", "btn-gamble"];
+  const actionButtons = ["btn-normal", "btn-heavy"];
   const shouldDisable = state.isProcessing || state.isGameOver;
   actionButtons.forEach((id) => {
     document.getElementById(id).disabled = shouldDisable;
