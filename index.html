@@ -168,6 +168,14 @@
                 ></span
               >
             </div>
+            <div class="enemy-badge-row">
+              <span
+                id="enemy-debuff-badge"
+                class="status-badge debuff"
+                style="display: none"
+                >🛡️防御DOWN</span
+              >
+            </div>
             <div class="bar-bg">
               <div id="enemy-hp-bar" class="bar-fill"></div>
             </div>
@@ -295,5 +303,18 @@
 
     <!-- ここで main.js を読み込みます -->
     <script src="main.js"></script>
+    <!-- 勝敗結果モーダル -->
+    <div id="result-modal" class="result-modal" style="display: none">
+      <div class="result-box">
+        <h2 id="result-title">VICTORY</h2>
+        <p id="result-text">キングスライムを討伐した！</p>
+        <div class="result-stats">
+          かかったターン数: <span id="result-turns">0</span> ターン
+        </div>
+        <button class="dq-btn result-btn" onclick="resetGame()">
+          もう一度たたかう
+        </button>
+      </div>
+    </div>
   </body>
 </html>

@@ -378,22 +378,52 @@ function processTurnEnd() {
 // =========================================================================
 // 勝敗判定・ゲームリセット処理
 // =========================================================================
+// =========================================================================
+// 勝敗判定・ゲームリセット処理
+// =========================================================================
 function checkBattleEnd() {
   if (state.enemy.hp <= 0) {
     addLog(`🎉 キングスライムをやっつけた！ ゆうしゃの勝利！`, "log-crit");
     state.isGameOver = true;
+    showResultModal(true); // ★ ここで勝利モーダルを呼ぶ
     return true;
   }
   if (state.player.hp <= 0) {
     addLog(`💀 ゆうしゃは力尽きてしまった… ゲームオーバー。`, "log-enemy");
     state.isGameOver = true;
+    showResultModal(false); // ★ ここで敗北モーダルを呼ぶ
     return true;
   }
   return false;
 }
 
+// ★ モーダル表示用関数
+function showResultModal(isWin) {
+  setTimeout(() => {
+    const modal = document.getElementById("result-modal");
+    const title = document.getElementById("result-title");
+    const text = document.getElementById("result-text");
+    const turns = document.getElementById("result-turns");
+
+    if (turns) turns.textContent = state.turn;
+
+    if (isWin) {
+      title.textContent = "★ VICTORY ★";
+      title.className = "victory";
+      text.textContent = "キングスライムを討伐した！";
+    } else {
+      title.textContent = "GAME OVER";
+      title.className = "defeat";
+      text.textContent = "ゆうしゃは力尽きてしまった…";
+    }
+
+    if (modal) modal.style.display = "flex";
+  }, 800);
+}
 function resetGame() {
   if (state.isProcessing) return; // アニメーション中はリセット不可
+  const modal = document.getElementById("result-modal");
+  if (modal) modal.style.display = "none";
 
   state.turn = 1;
   state.phase = "player";
@@ -564,17 +594,30 @@ function updateUI() {
     stateBadge.className = "status-badge fever";
     gameScreen.classList.add("fever-mode");
   } else {
-    stateBadge.textContent = "通常";
+    // ★ ここに「確変 5%」を明記
+    stateBadge.textContent = "全行動の確変発生率 5%";
     stateBadge.className = "status-badge";
     gameScreen.classList.remove("fever-mode");
   }
 
+  // プレイヤーの攻撃力バフ
   const buffBadge = document.getElementById("player-buff-badge");
   if (state.player.attackBuffTurns > 0) {
     buffBadge.style.display = "inline-block";
     buffBadge.textContent = `⚔️攻撃UP (${state.player.attackBuffTurns}T)`;
   } else {
     buffBadge.style.display = "none";
+  }
+
+  // ★ ここを追加：敵の防御力デバフ
+  const enemyDebuffBadge = document.getElementById("enemy-debuff-badge");
+  if (enemyDebuffBadge) {
+    if (state.enemy.defenseDebuffTurns > 0) {
+      enemyDebuffBadge.style.display = "inline-block";
+      enemyDebuffBadge.textContent = `🛡️防御DOWN (${state.enemy.defenseDebuffTurns}T)`;
+    } else {
+      enemyDebuffBadge.style.display = "none";
+    }
   }
 
   // 4. 敵のターン中やゲーム終了時はコマンドボタンをロック
